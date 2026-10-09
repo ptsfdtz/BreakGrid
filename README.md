@@ -22,17 +22,11 @@ pnpm preview
 
 ## Cloudflare Pages 部署
 
-仓库包含 `Deploy Cloudflare Pages` 工作流：推送到 `main` 时自动测试、构建并上传 `dist`，也可以在 GitHub Actions 手动运行。Cloudflare 使用根路径 `/`，兼容桌面安装及离线缓存。
+现有 Cloudflare Pages 项目 `breakgrid` 使用 Git 集成，连接 `ptsfdtz/BreakGrid` 的 `main` 分支。推送代码后 Cloudflare 自动测试、构建并发布，保留 `breakgrid.pages.dev` 和 `breakgrid.ptsfdtz.top` 域名。
 
-首次配置：
+构建命令为 `pnpm test && pnpm build`，输出目录为 `dist`，根目录为仓库根目录。生产环境配置 `NODE_VERSION=24`、`PNPM_VERSION=11.25.0`；`package.json` 同时固定 pnpm 版本。资源路径使用 `/`，兼容 PWA 安装和离线缓存。
 
-1. 在 Cloudflare **Workers & Pages** 创建 Pages 项目（Direct Upload / 直接上传），默认名称 `breakgrid`；已有 Pages 项目可以直接使用。
-2. 在 Cloudflare 创建 API Token，权限为 **Account → Cloudflare Pages → Edit**，范围限定到对应账户。
-3. 在 GitHub 仓库 **Settings → Secrets and variables → Actions → Secrets** 添加 `CLOUDFLARE_API_TOKEN` 和 `CLOUDFLARE_ACCOUNT_ID`（账户 ID 可在 Cloudflare 控制台查看）。凭据只放在 Secrets 中。
-4. 如果项目名称不是 `breakgrid`，在同一位置的 **Variables** 添加 `CLOUDFLARE_PAGES_PROJECT`，值为实际项目名。
-5. 在 **Actions → Deploy Cloudflare Pages → Run workflow** 运行一次，以后推送自动发布。发布地址以工作流输出或 Cloudflare 项目控制台为准。
-
-如果项目已经使用 Cloudflare 自带的 Git 自动部署，选择其中一种部署方式即可，避免同一推送重复发布。此工作流不依赖 GitHub Pages 工作流，二者可独立运行；缺少 Cloudflare 凭据时会明确提示配置项。
+无需在 GitHub 存储 Cloudflare API Token。自动部署由 Cloudflare 的 Git 连接触发，GitHub Pages 工作流独立保留。部署状态及构建日志在 Cloudflare 项目的“部署”页查看。
 
 ## GitHub Pages 部署
 
