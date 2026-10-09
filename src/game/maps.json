@@ -1,0 +1,941 @@
+[
+  {
+    "id": "map-01",
+    "name": "初见裂隙",
+    "pockets": [
+      [
+        13,
+        13,
+        12,
+        18
+      ],
+      [
+        15,
+        31,
+        10,
+        5
+      ]
+    ],
+    "walls": [],
+    "entrances": [
+      {
+        "side": "bottom",
+        "position": 6,
+        "width": 1,
+        "depth": 6,
+        "bend": 2
+      }
+    ]
+  },
+  {
+    "id": "map-02",
+    "name": "双生绿洲",
+    "pockets": [
+      [
+        7,
+        16,
+        7,
+        15
+      ],
+      [
+        24,
+        16,
+        7,
+        15
+      ],
+      [
+        7,
+        29,
+        24,
+        2
+      ]
+    ],
+    "walls": [
+      [
+        18,
+        1,
+        1,
+        27
+      ]
+    ],
+    "entrances": [
+      {
+        "side": "bottom",
+        "position": 13,
+        "width": 1,
+        "depth": 11,
+        "bend": 3
+      }
+    ]
+  },
+  {
+    "id": "map-03",
+    "name": "曲径穿行",
+    "pockets": [
+      [
+        9,
+        12,
+        2,
+        14
+      ]
+    ],
+    "walls": [
+      [
+        1,
+        27,
+        23,
+        1
+      ]
+    ],
+    "entrances": [
+      {
+        "side": "bottom",
+        "position": 20,
+        "width": 1,
+        "depth": 16,
+        "bend": -4
+      }
+    ]
+  },
+  {
+    "id": "map-04",
+    "name": "环形禁区",
+    "pockets": [
+      [
+        12,
+        16,
+        14,
+        12
+      ],
+      [
+        15,
+        31,
+        10,
+        2
+      ]
+    ],
+    "walls": [
+      [
+        8,
+        12,
+        22,
+        1
+      ],
+      [
+        8,
+        29,
+        22,
+        1
+      ],
+      [
+        8,
+        12,
+        1,
+        18
+      ],
+      [
+        29,
+        12,
+        1,
+        18
+      ]
+    ],
+    "entrances": [
+      {
+        "side": "bottom",
+        "position": 27,
+        "width": 2,
+        "depth": 9,
+        "bend": -5
+      }
+    ]
+  },
+  {
+    "id": "map-05",
+    "name": "全面突破",
+    "pockets": [
+      [
+        9,
+        12,
+        2,
+        16
+      ],
+      [
+        27,
+        12,
+        2,
+        16
+      ]
+    ],
+    "walls": [
+      [
+        2,
+        12,
+        34,
+        1
+      ],
+      [
+        2,
+        23,
+        34,
+        1
+      ]
+    ],
+    "entrances": [
+      {
+        "side": "bottom",
+        "position": 10,
+        "width": 1,
+        "depth": 14,
+        "bend": 2
+      }
+    ]
+  },
+  {
+    "id": "map-06",
+    "name": "终极风暴",
+    "pockets": [
+      [
+        15,
+        26,
+        8,
+        8
+      ],
+      [
+        15,
+        31,
+        10,
+        4
+      ]
+    ],
+    "walls": [
+      [
+        1,
+        12,
+        36,
+        1
+      ],
+      [
+        1,
+        24,
+        36,
+        1
+      ],
+      [
+        11,
+        1,
+        1,
+        40
+      ],
+      [
+        26,
+        1,
+        1,
+        40
+      ]
+    ],
+    "entrances": [
+      {
+        "side": "bottom",
+        "position": 17,
+        "width": 2,
+        "depth": 7,
+        "bend": 3
+      }
+    ]
+  },
+  {
+    "id": "map-07",
+    "name": "左岸长隧",
+    "pockets": [
+      [
+        8,
+        12,
+        8,
+        12
+      ]
+    ],
+    "walls": [],
+    "entrances": [
+      {
+        "side": "bottom",
+        "position": 24,
+        "width": 1,
+        "depth": 12,
+        "bend": -4
+      }
+    ]
+  },
+  {
+    "id": "map-08",
+    "name": "右岸长隧",
+    "pockets": [
+      [
+        21,
+        14,
+        8,
+        11
+      ]
+    ],
+    "walls": [
+      [
+        18,
+        1,
+        1,
+        27
+      ]
+    ],
+    "entrances": [
+      {
+        "side": "bottom",
+        "position": 7,
+        "width": 3,
+        "depth": 17,
+        "bend": 5
+      }
+    ]
+  },
+  {
+    "id": "map-09",
+    "name": "深井入口",
+    "pockets": [
+      [
+        13,
+        10,
+        12,
+        8
+      ]
+    ],
+    "walls": [
+      [
+        1,
+        27,
+        23,
+        1
+      ]
+    ],
+    "entrances": [
+      {
+        "side": "bottom",
+        "position": 14,
+        "width": 1,
+        "depth": 10,
+        "bend": 2
+      }
+    ]
+  },
+  {
+    "id": "map-10",
+    "name": "双底通道",
+    "pockets": [
+      [
+        10,
+        25,
+        18,
+        2
+      ]
+    ],
+    "walls": [
+      [
+        8,
+        12,
+        22,
+        1
+      ],
+      [
+        8,
+        29,
+        22,
+        1
+      ],
+      [
+        8,
+        12,
+        1,
+        18
+      ],
+      [
+        29,
+        12,
+        1,
+        18
+      ]
+    ],
+    "entrances": [
+      {
+        "side": "bottom",
+        "position": 5,
+        "width": 2,
+        "depth": 15,
+        "bend": 3
+      },
+      {
+        "side": "bottom",
+        "position": 30,
+        "width": 1,
+        "depth": 6,
+        "bend": -3
+      }
+    ]
+  },
+  {
+    "id": "map-11",
+    "name": "宽口绿海",
+    "pockets": [
+      [
+        7,
+        12,
+        5,
+        18
+      ],
+      [
+        25,
+        12,
+        5,
+        18
+      ]
+    ],
+    "walls": [
+      [
+        2,
+        12,
+        34,
+        1
+      ],
+      [
+        2,
+        23,
+        34,
+        1
+      ]
+    ],
+    "entrances": [
+      {
+        "side": "bottom",
+        "position": 28,
+        "width": 1,
+        "depth": 8,
+        "bend": -4
+      }
+    ]
+  },
+  {
+    "id": "map-12",
+    "name": "偏心球仓",
+    "pockets": [
+      [
+        14,
+        16,
+        10,
+        13
+      ]
+    ],
+    "walls": [
+      [
+        1,
+        12,
+        36,
+        1
+      ],
+      [
+        1,
+        24,
+        36,
+        1
+      ],
+      [
+        11,
+        1,
+        1,
+        40
+      ],
+      [
+        26,
+        1,
+        1,
+        40
+      ]
+    ],
+    "entrances": [
+      {
+        "side": "bottom",
+        "position": 11,
+        "width": 3,
+        "depth": 13,
+        "bend": 5
+      }
+    ]
+  },
+  {
+    "id": "map-13",
+    "name": "左偏折返",
+    "pockets": [
+      [
+        8,
+        12,
+        8,
+        12
+      ]
+    ],
+    "walls": [],
+    "entrances": [
+      {
+        "side": "bottom",
+        "position": 18,
+        "width": 1,
+        "depth": 6,
+        "bend": 2
+      }
+    ]
+  },
+  {
+    "id": "map-14",
+    "name": "右偏折返",
+    "pockets": [
+      [
+        21,
+        14,
+        8,
+        14
+      ]
+    ],
+    "walls": [
+      [
+        18,
+        1,
+        1,
+        27
+      ]
+    ],
+    "entrances": [
+      {
+        "side": "bottom",
+        "position": 25,
+        "width": 2,
+        "depth": 11,
+        "bend": -3
+      }
+    ]
+  },
+  {
+    "id": "map-15",
+    "name": "三线汇流",
+    "pockets": [
+      [
+        13,
+        10,
+        12,
+        8
+      ]
+    ],
+    "walls": [
+      [
+        1,
+        27,
+        23,
+        1
+      ]
+    ],
+    "entrances": [
+      {
+        "side": "bottom",
+        "position": 5,
+        "width": 1,
+        "depth": 16,
+        "bend": 4
+      },
+      {
+        "side": "bottom",
+        "position": 17,
+        "width": 1,
+        "depth": 7,
+        "bend": 4
+      },
+      {
+        "side": "bottom",
+        "position": 30,
+        "width": 1,
+        "depth": 10,
+        "bend": -4
+      }
+    ]
+  },
+  {
+    "id": "map-16",
+    "name": "中轴长廊",
+    "pockets": [
+      [
+        10,
+        25,
+        18,
+        7
+      ]
+    ],
+    "walls": [
+      [
+        8,
+        12,
+        22,
+        1
+      ],
+      [
+        8,
+        29,
+        22,
+        1
+      ],
+      [
+        8,
+        12,
+        1,
+        18
+      ],
+      [
+        29,
+        12,
+        1,
+        18
+      ]
+    ],
+    "entrances": [
+      {
+        "side": "bottom",
+        "position": 15,
+        "width": 2,
+        "depth": 9,
+        "bend": 5
+      }
+    ]
+  },
+  {
+    "id": "map-17",
+    "name": "侧门迷宫",
+    "pockets": [
+      [
+        7,
+        12,
+        5,
+        16
+      ],
+      [
+        25,
+        12,
+        5,
+        16
+      ]
+    ],
+    "walls": [
+      [
+        2,
+        12,
+        34,
+        1
+      ],
+      [
+        2,
+        23,
+        34,
+        1
+      ]
+    ],
+    "entrances": [
+      {
+        "side": "bottom",
+        "position": 22,
+        "width": 1,
+        "depth": 14,
+        "bend": -2
+      }
+    ]
+  },
+  {
+    "id": "map-18",
+    "name": "阶梯绿洲",
+    "pockets": [
+      [
+        14,
+        16,
+        10,
+        15
+      ]
+    ],
+    "walls": [
+      [
+        1,
+        12,
+        36,
+        1
+      ],
+      [
+        1,
+        24,
+        36,
+        1
+      ],
+      [
+        11,
+        1,
+        1,
+        40
+      ],
+      [
+        26,
+        1,
+        1,
+        40
+      ]
+    ],
+    "entrances": [
+      {
+        "side": "bottom",
+        "position": 29,
+        "width": 2,
+        "depth": 7,
+        "bend": -3
+      }
+    ]
+  },
+  {
+    "id": "map-19",
+    "name": "窄缝深仓",
+    "pockets": [
+      [
+        8,
+        12,
+        8,
+        12
+      ]
+    ],
+    "walls": [],
+    "entrances": [
+      {
+        "side": "bottom",
+        "position": 12,
+        "width": 1,
+        "depth": 12,
+        "bend": 4
+      }
+    ]
+  },
+  {
+    "id": "map-20",
+    "name": "对角穿行",
+    "pockets": [
+      [
+        21,
+        14,
+        8,
+        11
+      ]
+    ],
+    "walls": [
+      [
+        18,
+        1,
+        1,
+        27
+      ]
+    ],
+    "entrances": [
+      {
+        "side": "bottom",
+        "position": 19,
+        "width": 3,
+        "depth": 17,
+        "bend": -5
+      }
+    ]
+  },
+  {
+    "id": "map-21",
+    "name": "双底入口",
+    "pockets": [
+      [
+        13,
+        10,
+        12,
+        8
+      ]
+    ],
+    "walls": [
+      [
+        1,
+        27,
+        23,
+        1
+      ]
+    ],
+    "entrances": [
+      {
+        "side": "bottom",
+        "position": 5,
+        "width": 1,
+        "depth": 10,
+        "bend": 2
+      },
+      {
+        "side": "bottom",
+        "position": 30,
+        "width": 2,
+        "depth": 13,
+        "bend": -2
+      }
+    ]
+  },
+  {
+    "id": "map-22",
+    "name": "四洞汇流",
+    "pockets": [
+      [
+        10,
+        25,
+        18,
+        2
+      ]
+    ],
+    "walls": [
+      [
+        8,
+        12,
+        22,
+        1
+      ],
+      [
+        8,
+        29,
+        22,
+        1
+      ],
+      [
+        8,
+        12,
+        1,
+        18
+      ],
+      [
+        29,
+        12,
+        1,
+        18
+      ]
+    ],
+    "entrances": [
+      {
+        "side": "bottom",
+        "position": 5,
+        "width": 2,
+        "depth": 15,
+        "bend": 3
+      },
+      {
+        "side": "bottom",
+        "position": 13,
+        "width": 1,
+        "depth": 6,
+        "bend": 3
+      },
+      {
+        "side": "bottom",
+        "position": 22,
+        "width": 1,
+        "depth": 9,
+        "bend": -3
+      },
+      {
+        "side": "bottom",
+        "position": 30,
+        "width": 2,
+        "depth": 12,
+        "bend": -3
+      }
+    ]
+  },
+  {
+    "id": "map-23",
+    "name": "回旋绿海",
+    "pockets": [
+      [
+        7,
+        12,
+        5,
+        18
+      ],
+      [
+        25,
+        12,
+        5,
+        18
+      ]
+    ],
+    "walls": [
+      [
+        2,
+        12,
+        34,
+        1
+      ],
+      [
+        2,
+        23,
+        34,
+        1
+      ]
+    ],
+    "entrances": [
+      {
+        "side": "bottom",
+        "position": 16,
+        "width": 1,
+        "depth": 8,
+        "bend": 4
+      }
+    ]
+  },
+  {
+    "id": "map-24",
+    "name": "满屏风暴",
+    "pockets": [
+      [
+        14,
+        16,
+        10,
+        13
+      ]
+    ],
+    "walls": [
+      [
+        1,
+        12,
+        36,
+        1
+      ],
+      [
+        1,
+        24,
+        36,
+        1
+      ],
+      [
+        11,
+        1,
+        1,
+        40
+      ],
+      [
+        26,
+        1,
+        1,
+        40
+      ]
+    ],
+    "entrances": [
+      {
+        "side": "bottom",
+        "position": 23,
+        "width": 3,
+        "depth": 13,
+        "bend": -5
+      }
+    ]
+  }
+]

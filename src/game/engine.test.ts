@@ -1,7 +1,7 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { Engine, PADDLE_Y, SKILL_COOLDOWN } from './engine';
-import { CELL, COLS, ROWS, GRID_X, GRID_Y, HEIGHT, makeLevel, WIDTH, type Brick } from './levels';
-import { completeLevel, loadSave, type Save } from './storage';
+import { CELL, COLS, ROWS, LEVELS, GRID_X, GRID_Y, HEIGHT, makeLevel, WIDTH, type Brick } from './levels';
+import { recordBest, loadSave, type Save } from './storage';
 
 function isolated(hp = 10): { game: Engine; brick: Brick } {
   const game = new Engine(0, () => 0.99);
@@ -146,33 +146,57 @@ describe('closed chambers and campaign', () => {
     const score = g.score; g.hitBrick(grey); expect(g.score).toBe(score);
     g.balls.forEach(b => b.y = HEIGHT + 50); g.step(1 / 120); expect(g.lives).toBe(3);
   });
-  it('has six distinct dense maps bounded by ten-hit grey walls', () => {
+  it('has 24 distinct dense maps bounded by ten-hit grey walls', () => {
     const signatures = [];
-    for (let i = 0; i < 6; i++) {
+    for (let i = 0; i < LEVELS.length; i++) {
       const b = makeLevel(i); expect(b.length).toBeGreaterThan(1100); expect(b.some(b => b.hp === 1)).toBe(true);
       expect(b.every(b => b.col >= 0 && b.col < COLS && b.row >= 0 && b.row < ROWS)).toBe(true);
       expect(b.filter(b => b.row === 0 || b.col === 0 || b.col === COLS - 1 || b.row === ROWS - 1).every(b => b.hp === 10)).toBe(true);
       expect(new Set(b.map(b => b.id)).size).toBe(b.length); signatures.push(JSON.stringify(b));
     }
-    expect(new Set(signatures).size).toBe(6); expect(WIDTH).toBeGreaterThan(COLS * CELL);
+    expect(new Set(signatures).size).toBe(24); expect(WIDTH).toBeGreaterThan(COLS * CELL);
   });
-  it('has a single-cell gate and a navigable offset passage to the chamber', () => {
-    for (let level = 0; level < 6; level++) {
-      const bricks = makeLevel(level), occupied = new Set(bricks.map(b => b.id));
-      expect(bricks.filter(b => b.row === ROWS - 1)).toHaveLength(COLS - 1);
-      expect(occupied.has((ROWS - 1) * COLS + 18)).toBe(false);
-      expect(occupied.has(36 * COLS + 18)).toBe(true); expect(occupied.has(36 * COLS + 21)).toBe(false);
-      const queue = [[18, ROWS - 1]], visited = new Set<string>();
-      while (queue.length) {
-        const [c, r] = queue.shift()!, key = `${c},${r}`;
-        if (c < 0 || c >= COLS || r < 0 || r >= ROWS || visited.has(key) || occupied.has(r * COLS + c)) continue;
-        visited.add(key); queue.push([c - 1, r], [c + 1, r], [c, r - 1], [c, r + 1]);
+  it('has valid, connected entrances with bottom-only openings and varied tunnel lengths, widths and positions', () => {
+    expect(LEVELS).toHaveLength(24);
+    expect(new Set(LEVELS.map(map => map.id)).size).toBe(24);
+    expect(new Set(LEVELS.flatMap(map => map.entrances.map(gate => gate.side)))).toEqual(new Set(['bottom']));
+    expect(new Set(LEVELS.flatMap(map => map.entrances.map(gate => gate.depth))).size).toBeGreaterThan(6);
+    expect(new Set(LEVELS.flatMap(map => map.entrances.map(gate => gate.width))).size).toBe(3);
+    for (let level = 0; level < LEVELS.length; level++) {
+      const config = LEVELS[level];
+      const occupied = new Set(makeLevel(level).map(brick => brick.id));
+      for (let col = 0; col < COLS; col++) expect(occupied.has(col)).toBe(true);
+      for (let row = 0; row < ROWS; row++) {
+        expect(occupied.has(row * COLS)).toBe(true);
+        expect(occupied.has(row * COLS + COLS - 1)).toBe(true);
       }
-      expect(visited.has('20,34')).toBe(true);
+      const mouths = new Set(config.entrances.flatMap(gate => Array.from({ length: gate.width }, (_, i) => gate.position + i)));
+      for (let col = 0; col < COLS; col++) expect(occupied.has((ROWS - 1) * COLS + col)).toBe(!mouths.has(col));
+      for (const gate of config.entrances) {
+        const edgeLength = ['top', 'bottom'].includes(gate.side) ? COLS : ROWS;
+        expect(gate.position).toBeGreaterThan(0);
+        expect(gate.position + gate.width).toBeLessThan(edgeLength);
+        expect(gate.width * CELL).toBeGreaterThan(6.8); // Ball diameter fits the aperture.
+        const [c, r] = gate.side === 'bottom' ? [gate.position, ROWS - 1]
+          : gate.side === 'top' ? [gate.position, 0]
+          : gate.side === 'left' ? [0, gate.position] : [COLS - 1, gate.position];
+        const queue = [[c, r]], visited = new Set<number>();
+        while (queue.length) {
+          const [x, y] = queue.shift()!, id = y * COLS + x;
+          if (x < 0 || x >= COLS || y < 0 || y >= ROWS || occupied.has(id) || visited.has(id)) continue;
+          visited.add(id); queue.push([x - 1, y], [x + 1, y], [x, y - 1], [x, y + 1]);
+        }
+        expect(visited.size).toBeGreaterThan(gate.depth + gate.width);
+        const depths = [...visited].map(id => {
+          const x = id % COLS, y = Math.floor(id / COLS);
+          return gate.side === 'bottom' ? ROWS - 1 - y : gate.side === 'top' ? y : gate.side === 'left' ? x : COLS - 1 - x;
+        });
+        expect(Math.max(...depths)).toBeGreaterThan(gate.depth + 3);
+      }
     }
   });
-  it('keeps a 243-ball simulation finite on all six layouts', () => {
-    for (let level = 0; level < 6; level++) {
+  it('keeps a 243-ball simulation finite on all 24 layouts', () => {
+    for (let level = 0; level < LEVELS.length; level++) {
       const g = new Engine(level, () => 0.99); g.launch();
       g.balls = Array.from({ length: 243 }, (_, i) => g.newBall(30 + i % 24 * 15, GRID_Y + ROWS * CELL + 18 + Math.floor(i / 24) * 8, (i % 9 - 4) * 0.2));
       for (let f = 0; f < 1200 && g.status === 'playing'; f++) {
@@ -181,10 +205,21 @@ describe('closed chambers and campaign', () => {
       expect(g.bricks.size).toBeLessThan(g.total); expect(g.balls.every(b => [b.x, b.y, b.vx, b.vy].every(Number.isFinite))).toBe(true);
     }
   });
-  it('unlocks the next level and retains best scores', () => {
-    const save: Save = { unlocked: 1, best: Array(6).fill(0), sound: true, vibration: true };
-    const next = completeLevel(save, 0, 1200); expect(next.unlocked).toBe(2); expect(next.best[0]).toBe(1200);
-    expect(completeLevel(next, 0, 500).best[0]).toBe(1200); expect(completeLevel(next, 5, 2000).unlocked).toBe(6);
+  it('records independent map best scores', () => {
+    const save: Save = { best: Array(LEVELS.length).fill(0), sound: true, vibration: true };
+    const next = recordBest(save, 0, 1200); expect(next.best[0]).toBe(1200);
+    expect(recordBest(next, 0, 500).best[0]).toBe(1200); expect(recordBest(next, 5, 2000).best[5]).toBe(2000);
   });
-  it('handles unavailable browser storage', () => { expect(loadSave().unlocked).toBe(1); });
+  it('handles unavailable browser storage', () => { expect(loadSave().best).toEqual(Array(LEVELS.length).fill(0)); });
+  it('expands existing six-map saves while preserving scores and settings', () => {
+    vi.stubGlobal('localStorage', { getItem: () => JSON.stringify({ best: [1200, 0, 700, 0, 0, 900], sound: false, vibration: true }) });
+    try {
+      const save = loadSave();
+      expect(save.best).toHaveLength(24);
+      expect(save.best.slice(0, 6)).toEqual([1200, 0, 700, 0, 0, 900]);
+      expect(save.best.slice(6)).toEqual(Array(18).fill(0));
+      expect(save.sound).toBe(false);
+      expect(recordBest(save, 23, 4200).best[23]).toBe(4200);
+    } finally { vi.unstubAllGlobals(); }
+  });
 });
