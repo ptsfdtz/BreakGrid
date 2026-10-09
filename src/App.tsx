@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState, type PointerEvent } from 'react';
 import { ChevronRight, Crosshair, Download, Expand, Heart, Maximize2, Pause, Play, RefreshCw, RotateCcw, Settings2, Trophy, Vibrate, Volume2, X, Zap } from 'lucide-react';
 import { Engine, type Snapshot } from './game/engine';
 import { LEVELS, WIDTH } from './game/levels';
@@ -25,7 +25,7 @@ export default function App() {
   const completed = useRef(false);
   const controls = useRef({ left: false, right: false });
   const dragging = useRef<number | null>(null);
-  const pressStart = useRef<{ x: number; y: number; ready: boolean } | null>(null);
+  const pressStart = useRef<{ x: number; y: number; ready: boolean; paddle: number } | null>(null);
   const modalOpen = useRef(false);
   modalOpen.current = help || chooser;
 
@@ -116,11 +116,39 @@ export default function App() {
   }, [sync]);
 
   const position = (clientX: number) => { const rect = canvas.current!.getBoundingClientRect(); game.current.move((clientX - rect.left) / rect.width * WIDTH); };
+  const pointerDown = (e: PointerEvent<HTMLDivElement>) => {
+    if (modalOpen.current || !['ready', 'playing'].includes(game.current.status)
+      || (e.target instanceof Element && e.target.closest('button, header, [role="dialog"]'))
+      || dragging.current !== null) return;
+    dragging.current = e.pointerId;
+    pressStart.current = { x: e.clientX, y: e.clientY, ready: game.current.status === 'ready', paddle: game.current.paddle };
+    e.currentTarget.setPointerCapture(e.pointerId);
+    if (e.pointerType === 'mouse') position(e.clientX);
+  };
+  const pointerMove = (e: PointerEvent<HTMLDivElement>) => {
+    if (modalOpen.current || !['ready', 'playing'].includes(game.current.status)) return;
+    if (dragging.current === e.pointerId && pressStart.current) {
+      if (e.pointerType === 'mouse') position(e.clientX);
+      else {
+        const width = canvas.current!.getBoundingClientRect().width;
+        game.current.move(pressStart.current.paddle + (e.clientX - pressStart.current.x) / width * WIDTH);
+      }
+    } else if (e.pointerType === 'mouse' && e.target instanceof HTMLCanvasElement) position(e.clientX);
+  };
+  const pointerUp = (e: PointerEvent<HTMLDivElement>) => {
+    if (dragging.current !== e.pointerId) return;
+    const press = pressStart.current;
+    dragging.current = null; pressStart.current = null;
+    if (!modalOpen.current && game.current.status === 'ready' && press?.ready && Math.hypot(e.clientX - press.x, e.clientY - press.y) < 10) start();
+  };
+  const pointerCancel = (e: PointerEvent<HTMLDivElement>) => {
+    if (dragging.current === e.pointerId) { dragging.current = null; pressStart.current = null; }
+  };
   const toggleFullscreen = async () => {
     try { if (document.fullscreenElement) await document.exitFullscreen(); else await document.documentElement.requestFullscreen(); }
     catch { setFullscreen(Boolean(document.fullscreenElement)); }
   };
-  return <div className="minimal-game">
+  return <div className="minimal-game" onPointerDown={pointerDown} onPointerMove={pointerMove} onPointerUp={pointerUp} onPointerCancel={pointerCancel} onLostPointerCapture={pointerCancel}>
     <header className="game-header">
       <span className="brand-mark" aria-label="方块破坏王"><i/><i/><i/><i/></span>
       <button className="level-select" onClick={() => { pause(); setChooser(true); }} aria-label="选择地图">{String(level + 1).padStart(2, '0')}<span>/ {LEVELS.length}</span><ChevronRight size={13}/></button>
@@ -137,10 +165,7 @@ export default function App() {
           <span className="ball-count" aria-label={`${state.balls} 球在场`}><i/>{state.balls}</span>
           <div className="lives" aria-label={`${state.lives} 次机会`}>{[0,1,2].map(i => <Heart key={i} size={14} className={i < state.lives ? 'alive' : ''} fill={i < state.lives ? 'currentColor' : 'none'}/>)}</div>
         </div>
-        <div className="arena" ref={arena}
-          onPointerDown={e => { if (e.target !== e.currentTarget && !(e.target instanceof HTMLCanvasElement)) return; if (dragging.current === null) { dragging.current = e.pointerId; pressStart.current = { x: e.clientX, y: e.clientY, ready: game.current.status === 'ready' }; e.currentTarget.setPointerCapture(e.pointerId); position(e.clientX); } }}
-          onPointerMove={e => { if (e.pointerType === 'mouse' || dragging.current === e.pointerId) position(e.clientX); }}
-          onPointerUp={e => { if (dragging.current !== e.pointerId) return; const press = pressStart.current; dragging.current = null; pressStart.current = null; if (press?.ready && Math.hypot(e.clientX - press.x, e.clientY - press.y) < 10) start(); }} onPointerCancel={() => { dragging.current = null; pressStart.current = null; }}>
+        <div className="arena" ref={arena}>
           <canvas ref={canvas} aria-label={`地图 ${level + 1}，左右拖动控制挡板`}/>
           {state.combo >= 5 && state.status === 'playing' && <div className="combo"><strong>{state.combo}</strong><Zap size={16}/></div>}
           {state.status === 'paused' && !help && !chooser && <div className="board-overlay"><Pause className="overlay-icon" size={32}/><button className="primary" onClick={resume} aria-label="继续"><Play size={20} fill="currentColor"/></button><button className="icon-button retry-button" onClick={() => chooseMap(level)} aria-label="重来"><RotateCcw size={20}/></button></div>}
@@ -154,7 +179,8 @@ export default function App() {
         <div className="progress-track" role="progressbar" aria-label="绿块清除进度" aria-valuenow={Math.floor(state.progress * 100)} aria-valuemin={0} aria-valuemax={100}><i style={{ width: `${state.progress * 100}%` }}/></div>
       </div>
     </main>
-    <footer className="game-controls">
+    <footer className="game-controls touch-pad" aria-label="挡板触控区，左右滑动控制挡板">
+      <div className="touch-pad-grip" aria-hidden="true"><i/><i/><i/></div>
       {state.status === 'ready' ? <button className="primary" onClick={start} aria-label="发射"><Play size={20} fill="currentColor"/></button> : <div className="auto-skills" aria-label="技能数量"><span className="split-skill"><SplitIcon/><span>×{state.split}</span></span><span className="volley-skill"><Crosshair size={22}/><span>×{state.volley}</span></span></div>}
     </footer>
     {(help || chooser) && <div className="modal-backdrop" onClick={() => { setHelp(false); setChooser(false); }}><section className={`modal ${chooser ? 'map-modal' : ''}`} role="dialog" aria-modal="true" aria-label={help ? '设置' : '选择地图'} onClick={e => e.stopPropagation()}>
