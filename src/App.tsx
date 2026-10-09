@@ -148,7 +148,7 @@ export default function App() {
     try { if (document.fullscreenElement) await document.exitFullscreen(); else await document.documentElement.requestFullscreen(); }
     catch { setFullscreen(Boolean(document.fullscreenElement)); }
   };
-  return <div className="minimal-game" onPointerDown={pointerDown} onPointerMove={pointerMove} onPointerUp={pointerUp} onPointerCancel={pointerCancel} onLostPointerCapture={pointerCancel}>
+  return <div className="minimal-game" onContextMenu={e => e.preventDefault()} onDragStart={e => e.preventDefault()} onPointerDown={pointerDown} onPointerMove={pointerMove} onPointerUp={pointerUp} onPointerCancel={pointerCancel} onLostPointerCapture={pointerCancel}>
     <header className="game-header">
       <span className="brand-mark" aria-label="方块破坏王"><i/><i/><i/><i/></span>
       <button className="level-select" onClick={() => { pause(); setChooser(true); }} aria-label="选择地图">{String(level + 1).padStart(2, '0')}<span>/ {LEVELS.length}</span><ChevronRight size={13}/></button>
