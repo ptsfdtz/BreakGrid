@@ -8,7 +8,7 @@ export type Particle = { x: number; y: number; vx: number; vy: number; life: num
 export type Snapshot = { status: Status; lives: number; score: number; balls: number; remaining: number; total: number; split: number; volley: number; combo: number; progress: number; wonTime: number };
 export type GameEvent = 'hit' | 'break' | 'catch' | 'skill' | 'life' | 'win';
 const SPEED = 295;
-export const MAX_BALLS = 96;
+export const SKILL_COOLDOWN = 0.5;
 export const PADDLE_Y = HEIGHT - 44;
 export const PADDLE_WIDTH = 86;
 const RADIUS = 3.4;
@@ -26,18 +26,23 @@ export class Engine {
   paddle = WIDTH / 2;
   target = WIDTH / 2;
   total = 0;
+  greenTotal = 0;
+  greenRemaining = 0;
   combo = 0;
   comboTimer = 0;
   elapsed = 0;
   shake = 0;
   wonTime = 0;
+  private skillReadyAt: Record<Skill, number> = { split: 0, volley: 0 };
   onEvent?: (event: GameEvent) => void;
   constructor(public level: number, private random: () => number = Math.random) {
     makeLevel(level).forEach(b => this.bricks.set(b.id, b));
     this.total = this.bricks.size;
+    this.greenTotal = [...this.bricks.values()].filter(b => b.maxHp === 1).length;
+    this.greenRemaining = this.greenTotal;
   }
   snapshot(): Snapshot {
-    return { status: this.status, lives: this.lives, score: this.score, balls: this.balls.length, remaining: this.bricks.size, total: this.total, split: this.split, volley: this.volley, combo: this.combo, progress: 1 - this.bricks.size / this.total, wonTime: this.wonTime };
+    return { status: this.status, lives: this.lives, score: this.score, balls: this.balls.length, remaining: this.greenRemaining, total: this.greenTotal, split: this.split, volley: this.volley, combo: this.combo, progress: this.greenTotal ? 1 - this.greenRemaining / this.greenTotal : 0, wonTime: this.wonTime };
   }
   move(x: number) { this.target = Math.max(12 + PADDLE_WIDTH / 2, Math.min(WIDTH - 12 - PADDLE_WIDTH / 2, x)); }
   newBall(x: number, y: number, angle: number): Ball {
@@ -51,33 +56,32 @@ export class Engine {
   pause() { if (this.status === 'playing') this.status = 'paused'; }
   resume() { if (this.status === 'paused') this.status = 'playing'; }
   activateSkill(kind: Skill) {
-    if (this.status !== 'playing') return false;
+    if (this.status !== 'playing' || this.elapsed < this.skillReadyAt[kind]) return false;
     if (kind === 'split') {
-      if (!this.balls.length || this.balls.length >= MAX_BALLS) return false;
+      if (!this.balls.length) return false;
       const originals = [...this.balls];
       for (const b of originals) for (const rotation of [-0.38, 0.38]) {
-        if (this.balls.length >= MAX_BALLS) break;
         let vx = b.vx * Math.cos(rotation) - b.vy * Math.sin(rotation);
         let vy = b.vx * Math.sin(rotation) + b.vy * Math.cos(rotation);
         if (Math.abs(vy) < SPEED * 0.28) { vy = Math.sign(vy || -1) * SPEED * 0.28; vx = Math.sign(vx || 1) * Math.sqrt(SPEED ** 2 - vy ** 2); }
         this.balls.push({ x: b.x, y: b.y, vx, vy, trail: [] });
       }
     } else {
-      const slots = Math.min(3, MAX_BALLS - this.balls.length);
-      if (slots <= 0) return false;
-      for (const a of [-0.38, 0, 0.38].slice(0, slots)) this.balls.push(this.newBall(this.paddle, PADDLE_Y - 10, a));
+      for (const a of [-0.38, 0, 0.38]) this.balls.push(this.newBall(this.paddle, PADDLE_Y - 10, a));
     }
+    this.skillReadyAt[kind] = this.elapsed + SKILL_COOLDOWN;
     this[kind]++;
     this.shake = 3;
     this.onEvent?.('skill');
     return true;
   }
   hitBrick(brick: Brick) {
-    if (!this.bricks.has(brick.id)) return;
+    if (this.status === 'won' || !this.bricks.has(brick.id)) return;
     brick.hp--;
     brick.flash = 0.11;
     if (brick.hp > 0) { this.score += 2; this.onEvent?.('hit'); return; }
     this.bricks.delete(brick.id);
+    if (brick.maxHp === 1) this.greenRemaining--;
     this.combo++;
     this.comboTimer = 1.8;
     this.score += (brick.maxHp > 1 ? 50 : 10) + Math.min(30, Math.floor(this.combo / 5) * 2);
@@ -86,7 +90,7 @@ export class Engine {
     this.burst(x, y, brick.maxHp > 1 ? '#b9c5d9' : '#a7f768', this.balls.length > 24 ? 2 : 5);
     if (this.random() < (brick.maxHp > 1 ? 0.25 : 0.08)) this.drops.push({ x, y, kind: this.random() < 0.5 ? 'split' : 'volley' });
     this.onEvent?.('break');
-    if (!this.bricks.size) {
+    if (brick.maxHp === 1 && this.greenRemaining === 0) {
       this.status = 'won';
       this.shake = 6;
       this.onEvent?.('win');
@@ -155,18 +159,22 @@ export class Engine {
           this.hitBrick(brick);
           collided = true;
         }
-        if (!this.bricks.size) break;
+        if (this.greenRemaining === 0) break;
       }
+      if (this.greenRemaining === 0) break;
     }
+    if (this.greenRemaining === 0) return;
     this.balls = this.balls.filter(b => b.y < HEIGHT + 12);
     for (const drop of this.drops) {
       const before = drop.y;
       drop.y += 110 * dt;
       if (before <= PADDLE_Y + 10 && drop.y >= PADDLE_Y - 10 && Math.abs(drop.x - this.paddle) < PADDLE_WIDTH / 2 + 9) {
-        this.activateSkill(drop.kind);
+        const activated = this.activateSkill(drop.kind);
         drop.y = HEIGHT + 30;
-        this.burst(drop.x, PADDLE_Y, drop.kind === 'split' ? '#b3a1ff' : '#ffcf75', 10);
-        this.onEvent?.('catch');
+        if (activated) {
+          this.burst(drop.x, PADDLE_Y, drop.kind === 'split' ? '#b3a1ff' : '#ffcf75', 10);
+          this.onEvent?.('catch');
+        }
       }
     }
     this.drops = this.drops.filter(d => d.y < HEIGHT + 20);

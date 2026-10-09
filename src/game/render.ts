@@ -41,7 +41,9 @@ export function render(ctx: CanvasRenderingContext2D, game: Engine, width: numbe
   for (const d of game.drops) {
     ctx.fillStyle = d.kind === 'split' ? '#ab94ff' : '#ffd071'; ctx.shadowColor = ctx.fillStyle; ctx.shadowBlur = 12;
     rounded(ctx, d.x - 9, d.y - 9, 18, 18, 5); ctx.shadowBlur = 0;
-    ctx.fillStyle = '#10182a'; ctx.font = 'bold 11px sans-serif'; ctx.textAlign = 'center'; ctx.fillText(d.kind === 'split' ? '×3' : '•••', d.x, d.y + 4);
+    ctx.fillStyle = d.kind === 'split' ? '#000' : '#10182a';
+    const dots = d.kind === 'split' ? [[0, -4], [-4, 3], [4, 3]] : [[-4, 0], [0, 0], [4, 0]];
+    for (const [x, y] of dots) { ctx.beginPath(); ctx.arc(d.x + x, d.y + y, 1.5, 0, Math.PI * 2); ctx.fill(); }
   }
   for (const p of game.particles) { ctx.globalAlpha = Math.min(1, p.life * 2); ctx.fillStyle = p.color; ctx.fillRect(p.x - 1.5, p.y - 1.5, 3, 3); }
   ctx.globalAlpha = 1;

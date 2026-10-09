@@ -1,27 +1,27 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ArrowRight, ChevronRight, Crosshair, Expand, Heart, LockKeyhole, Maximize2, Pause, Play, RotateCcw, Settings2, Trophy, Vibrate, Volume2, X, Zap } from 'lucide-react';
+import { ArrowRight, ChevronRight, Crosshair, Download, Expand, Heart, LockKeyhole, Maximize2, Pause, Play, RefreshCw, RotateCcw, Settings2, Trophy, Vibrate, Volume2, X, Zap } from 'lucide-react';
 import { Engine, type Snapshot } from './game/engine';
 import { LEVELS, WIDTH } from './game/levels';
 import { render } from './game/render';
 import { completeLevel, loadSave, persist, type Save } from './game/storage';
 import { Sound } from './game/audio';
+import { usePwa } from './pwa';
 
 const number = (n: number) => n.toLocaleString('en-US');
 export default function App() {
+  const pwa = usePwa();
   const [save, setSave] = useState<Save>(loadSave);
   const [level, setLevel] = useState(0);
   const game = useRef(new Engine(0));
   const [state, setState] = useState<Snapshot>(() => game.current.snapshot());
   const [help, setHelp] = useState(false);
   const [chooser, setChooser] = useState(false);
-  const [notice, setNotice] = useState('');
   const canvas = useRef<HTMLCanvasElement>(null);
   const arena = useRef<HTMLDivElement>(null);
   const sound = useRef(new Sound());
   const settings = useRef(save);
   const [fullscreen, setFullscreen] = useState(false);
   const completed = useRef(false);
-  const noticeTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const controls = useRef({ left: false, right: false });
   const dragging = useRef<number | null>(null);
   const pressStart = useRef<{ x: number; y: number; ready: boolean } | null>(null);
@@ -29,12 +29,11 @@ export default function App() {
   modalOpen.current = help || chooser;
 
   useEffect(() => { settings.current = save; persist(save); }, [save]);
-  const toast = useCallback((message: string) => { setNotice(message); clearTimeout(noticeTimer.current); noticeTimer.current = setTimeout(() => setNotice(''), 2400); }, []);
   const sync = useCallback(() => setState(game.current.snapshot()), []);
   const chooseLevel = (index: number) => {
     if (index + 1 > save.unlocked) return;
     game.current = new Engine(index); completed.current = false;
-    setLevel(index); setChooser(false); setNotice(''); sync();
+    setLevel(index); setChooser(false); sync();
   };
   const start = () => { sound.current.unlock(); game.current.paddle = game.current.target; game.current.launch(); sync(); };
   const pause = () => { game.current.pause(); sync(); };
@@ -76,7 +75,6 @@ export default function App() {
       g.onEvent = event => {
         if (settings.current.sound) sound.current.play(event);
         if (settings.current.vibration && ['catch', 'skill', 'life', 'win'].includes(event)) navigator.vibrate?.(event === 'win' ? [25, 35, 45] : 12);
-        if (event === 'catch') toast('自动触发');
       };
       const delta = last ? Math.min(0.05, (time - last) / 1000) : 0;
       last = time; accumulator += delta;
@@ -114,13 +112,13 @@ export default function App() {
     const keyup = (e: KeyboardEvent) => { if (e.key === 'ArrowLeft') controls.current.left = false; if (e.key === 'ArrowRight') controls.current.right = false; };
     const full = () => setFullscreen(Boolean(document.fullscreenElement));
     document.addEventListener('visibilitychange', visibility); window.addEventListener('blur', blur); window.addEventListener('keydown', keydown); window.addEventListener('keyup', keyup); document.addEventListener('fullscreenchange', full);
-    return () => { cancelAnimationFrame(frame); observer.disconnect(); clearTimeout(noticeTimer.current); document.removeEventListener('visibilitychange', visibility); window.removeEventListener('blur', blur); window.removeEventListener('keydown', keydown); window.removeEventListener('keyup', keyup); document.removeEventListener('fullscreenchange', full); };
-  }, [sync, toast]);
+    return () => { cancelAnimationFrame(frame); observer.disconnect(); document.removeEventListener('visibilitychange', visibility); window.removeEventListener('blur', blur); window.removeEventListener('keydown', keydown); window.removeEventListener('keyup', keyup); document.removeEventListener('fullscreenchange', full); };
+  }, [sync]);
 
   const position = (clientX: number) => { const rect = canvas.current!.getBoundingClientRect(); game.current.move((clientX - rect.left) / rect.width * WIDTH); };
   const toggleFullscreen = async () => {
     try { if (document.fullscreenElement) await document.exitFullscreen(); else await document.documentElement.requestFullscreen(); }
-    catch { toast('当前浏览器不支持全屏'); }
+    catch { setFullscreen(Boolean(document.fullscreenElement)); }
   };
   return <div className="minimal-game">
     <header className="game-header">
@@ -128,7 +126,7 @@ export default function App() {
       <button className="level-select" onClick={() => { pause(); setChooser(true); }} aria-label="选择关卡">{String(level + 1).padStart(2, '0')}<span>/ 06</span><ChevronRight size={13}/></button>
       <div className="header-actions">
         <button className="icon-button" onClick={openHelp} aria-label="设置"><Settings2 size={18}/></button>
-        <button className="icon-button fullscreen-button" onClick={toggleFullscreen} aria-label="全屏">{fullscreen ? <Maximize2 size={17}/> : <Expand size={17}/>}</button>
+        {document.fullscreenEnabled && <button className="icon-button fullscreen-button" onClick={toggleFullscreen} aria-label="全屏">{fullscreen ? <Maximize2 size={17}/> : <Expand size={17}/>}</button>}
         <button className="icon-button" onClick={pause} disabled={state.status !== 'playing'} aria-label="暂停"><Pause size={19}/></button>
       </div>
     </header>
@@ -145,28 +143,30 @@ export default function App() {
           onPointerUp={e => { if (dragging.current !== e.pointerId) return; const press = pressStart.current; dragging.current = null; pressStart.current = null; if (press?.ready && Math.hypot(e.clientX - press.x, e.clientY - press.y) < 10) start(); }} onPointerCancel={() => { dragging.current = null; pressStart.current = null; }}>
           <canvas ref={canvas} aria-label={`第 ${level + 1} 关，左右拖动控制挡板`}/>
           {state.combo >= 5 && state.status === 'playing' && <div className="combo"><strong>{state.combo}</strong><Zap size={16}/></div>}
-          {notice && <div className="toast" role="status">{notice}</div>}
-          {state.status === 'paused' && !help && !chooser && <div className="board-overlay"><Pause className="overlay-icon" size={32}/><button className="primary" onClick={resume}><Play size={16} fill="currentColor"/>继续</button><button className="text-button" onClick={() => chooseLevel(level)}><RotateCcw size={14}/>重来</button></div>}
+          {state.status === 'paused' && !help && !chooser && <div className="board-overlay"><Pause className="overlay-icon" size={32}/><button className="primary" onClick={resume} aria-label="继续"><Play size={20} fill="currentColor"/></button><button className="icon-button retry-button" onClick={() => chooseLevel(level)} aria-label="重来"><RotateCcw size={20}/></button></div>}
           {(state.status === 'lost' || state.status === 'won' && state.wonTime > 0.7) && <div className="board-overlay">
             {state.status === 'won' ? <Trophy className="overlay-icon success" size={35}/> : <RotateCcw className="overlay-icon" size={32}/>}
-            <h2>{state.status === 'won' ? level === 5 ? '全部通关' : '通关' : '再试一次'}</h2><div className="result-score">{number(state.score)}</div>
-            <button className="primary" onClick={() => chooseLevel(state.status === 'won' && level < 5 ? level + 1 : level)}>{state.status === 'won' && level < 5 ? '下一关' : '重来'}<ArrowRight size={16}/></button>
+            <div className="result-score" aria-label={`得分 ${state.score}`}>{number(state.score)}</div>
+            <button className="primary" aria-label={state.status === 'won' && level < 5 ? '下一关' : '重来'} onClick={() => chooseLevel(state.status === 'won' && level < 5 ? level + 1 : level)}>{state.status === 'won' && level < 5 ? <ArrowRight size={20}/> : <RotateCcw size={20}/>}</button>
           </div>}
         </div>
-        <div className="progress-track" role="progressbar" aria-label="清除进度" aria-valuenow={Math.floor(state.progress * 100)} aria-valuemin={0} aria-valuemax={100}><i style={{ width: `${state.progress * 100}%` }}/></div>
+        <div className="progress-track" role="progressbar" aria-label="绿块清除进度" aria-valuenow={Math.floor(state.progress * 100)} aria-valuemin={0} aria-valuemax={100}><i style={{ width: `${state.progress * 100}%` }}/></div>
       </div>
     </main>
     <footer className="game-controls">
-      {state.status === 'ready' ? <span className="tap-hint">点击发射</span> : <div className="auto-skills" aria-label="拾取技能自动触发"><span className="split-skill"><SplitIcon/><span>×{state.split}</span></span><span className="volley-skill"><Crosshair size={22}/><span>×{state.volley}</span></span></div>}
+      {state.status === 'ready' ? <button className="primary" onClick={start} aria-label="发射"><Play size={20} fill="currentColor"/></button> : <div className="auto-skills" aria-label="技能数量"><span className="split-skill"><SplitIcon/><span>×{state.split}</span></span><span className="volley-skill"><Crosshair size={22}/><span>×{state.volley}</span></span></div>}
     </footer>
     {(help || chooser) && <div className="modal-backdrop" onClick={() => { setHelp(false); setChooser(false); }}><section className="modal" role="dialog" aria-modal="true" aria-label={help ? '设置' : '选择关卡'} onClick={e => e.stopPropagation()}>
-      <button className="modal-close icon-button" aria-label="关闭" onClick={() => { setHelp(false); setChooser(false); }}><X size={20}/></button><h2>{help ? '设置' : '关卡'}</h2>
-      {chooser ? <div className="level-list">{LEVELS.map((item, i) => <button key={i} className={`level-item ${i === level ? 'selected' : ''}`} disabled={i + 1 > save.unlocked} onClick={() => chooseLevel(i)}><span>{String(i + 1).padStart(2, '0')}</span><strong>{item.name}</strong>{i + 1 > save.unlocked ? <LockKeyhole size={15}/> : <ChevronRight size={15}/>}</button>)}</div> : <>
-        <button className="setting-row" role="switch" aria-checked={save.sound} onClick={() => { sound.current.unlock(); setSave(s => ({ ...s, sound: !s.sound })); }}><Volume2 size={18}/><span>音效</span><span className={`toggle ${save.sound ? 'on' : ''}`}><i/></span></button>
-        <button className="setting-row" role="switch" aria-checked={save.vibration} onClick={() => setSave(s => ({ ...s, vibration: !s.vibration }))}><Vibrate size={18}/><span>震动</span><span className={`toggle ${save.vibration ? 'on' : ''}`}><i/></span></button>
-        <button className="setting-row" onClick={() => { setHelp(false); chooseLevel(level); }}><RotateCcw size={18}/><span>重来</span><ChevronRight size={15}/></button>
+      <button className="modal-close icon-button" aria-label="关闭" onClick={() => { setHelp(false); setChooser(false); }}><X size={20}/></button>
+      {chooser ? <div className="level-list">{LEVELS.map((item, i) => <button key={i} aria-label={`第 ${i + 1} 关 ${item.name}`} className={`level-item ${i === level ? 'selected' : ''}`} disabled={i + 1 > save.unlocked} onClick={() => chooseLevel(i)}><span>{String(i + 1).padStart(2, '0')}</span>{i + 1 > save.unlocked ? <LockKeyhole size={15}/> : <ChevronRight size={15}/>}</button>)}</div> : <>
+        {!pwa.standalone && <button className="setting-row" aria-label="安装到手机桌面" title="安装到手机桌面" onClick={() => { void pwa.install(); }}><Download size={18}/><ChevronRight size={15}/></button>}
+        {pwa.installHelp && !pwa.standalone && <p className="install-help">{pwa.isIos ? 'Safari → 分享 → 添加到主屏幕' : '浏览器菜单 → 安装应用 / 添加到主屏幕'}</p>}
+        {pwa.updateReady && <button className="setting-row" aria-label="更新应用" title="更新应用" onClick={() => { pause(); void pwa.update(); }}><RefreshCw size={18}/><ChevronRight size={15}/></button>}
+        <button className="setting-row" role="switch" aria-label="音效" aria-checked={save.sound} onClick={() => { sound.current.unlock(); setSave(s => ({ ...s, sound: !s.sound })); }}><Volume2 size={18}/><span className={`toggle ${save.sound ? 'on' : ''}`}><i/></span></button>
+        <button className="setting-row" role="switch" aria-label="震动" aria-checked={save.vibration} onClick={() => setSave(s => ({ ...s, vibration: !s.vibration }))}><Vibrate size={18}/><span className={`toggle ${save.vibration ? 'on' : ''}`}><i/></span></button>
+        <button className="setting-row" aria-label="重来" onClick={() => { setHelp(false); chooseLevel(level); }}><RotateCcw size={18}/><ChevronRight size={15}/></button>
       </>}
     </section></div>}
   </div>;
 }
-function SplitIcon() { return <svg width="25" height="25" viewBox="0 0 25 25" fill="none" aria-hidden="true"><path d="M12.5 17V10M12.5 14L5 7M12.5 14L20 7" stroke="currentColor" strokeWidth="1.5"/><circle cx="12.5" cy="20" r="2.4" fill="currentColor"/><circle cx="5" cy="5" r="2.4" fill="currentColor"/><circle cx="12.5" cy="6" r="2.4" fill="currentColor"/><circle cx="20" cy="5" r="2.4" fill="currentColor"/></svg>; }
+function SplitIcon() { return <svg width="25" height="25" viewBox="0 0 25 25" fill="none" aria-hidden="true"><rect x="2" y="2" width="21" height="21" rx="5" fill="currentColor"/><g fill="#000"><circle cx="12.5" cy="8" r="2"/><circle cx="8" cy="16" r="2"/><circle cx="17" cy="16" r="2"/></g></svg>; }

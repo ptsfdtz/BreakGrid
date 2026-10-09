@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { Engine, MAX_BALLS, PADDLE_Y } from './engine';
+import { Engine, PADDLE_Y, SKILL_COOLDOWN } from './engine';
 import { CELL, COLS, ROWS, GRID_X, GRID_Y, HEIGHT, makeLevel, WIDTH, type Brick } from './levels';
 import { completeLevel, loadSave, type Save } from './storage';
 
@@ -7,13 +7,15 @@ function isolated(hp = 10): { game: Engine; brick: Brick } {
   const game = new Engine(0, () => 0.99);
   const brick = { id: 13 * COLS + 10, row: 13, col: 10, hp, maxHp: hp, flash: 0 };
   game.bricks.clear(); game.bricks.set(brick.id, brick);
+  if (hp > 1) game.bricks.set(0, { id: 0, col: 0, row: 0, hp: 1, maxHp: 1, flash: 0 });
+  game.greenTotal = 1; game.greenRemaining = 1;
   return { game, brick };
 }
 describe('durability and physics', () => {
   it('destroys grey on exactly its tenth hit and green on its first', () => {
     const { game, brick } = isolated();
     for (let i = 1; i <= 9; i++) { game.hitBrick(brick); expect(brick.hp).toBe(10 - i); expect(game.bricks.has(brick.id)).toBe(true); }
-    game.hitBrick(brick); expect(game.bricks.size).toBe(0); expect(game.status).toBe('won');
+    game.hitBrick(brick); expect(game.bricks.size).toBe(1); expect(game.status).not.toBe('won');
     const green = isolated(1); green.game.hitBrick(green.brick); expect(green.game.bricks.size).toBe(0);
   });
   it('reflects from rails and paddle at constant speed', () => {
@@ -52,16 +54,22 @@ describe('automatic skills', () => {
     expect(g.balls.length).toBe(1); expect(g.split).toBe(0); expect(g.volley).toBe(0);
     const retry = new Engine(0); retry.launch(); expect(retry.balls.length).toBe(1);
   });
-  it('triples balls automatically and respects the 96-ball limit', () => {
-    const g = new Engine(0); g.launch(); g.activateSkill('split'); expect(g.balls.length).toBe(3);
-    g.activateSkill('split'); expect(g.balls.length).toBe(9); g.activateSkill('split'); g.activateSkill('split'); g.activateSkill('split'); expect(g.balls.length).toBe(MAX_BALLS);
-    const activations = g.split; expect(g.activateSkill('split')).toBe(false); expect(g.split).toBe(activations);
+  it('triples every ball on each activation beyond the former limit', () => {
+    const g = new Engine(0); g.launch();
+    for (let i = 1; i <= 8; i++) {
+      g.elapsed = i * SKILL_COOLDOWN;
+      expect(g.activateSkill('split')).toBe(true);
+      expect(g.balls.length).toBe(3 ** i); expect(g.split).toBe(i);
+    }
   });
-  it('adds three paddle balls and fills only available slots near the cap', () => {
+  it('always adds three paddle balls regardless of the current count', () => {
     const g = new Engine(0); expect(g.activateSkill('volley')).toBe(false); g.launch(); g.activateSkill('volley');
     expect(g.balls.length).toBe(4); expect(g.balls.slice(-3).every(b => b.vy < 0 && b.x === g.paddle)).toBe(true);
     g.balls = Array.from({ length: 95 }, () => g.newBall(210, 480, 0));
-    expect(g.activateSkill('volley')).toBe(true); expect(g.balls.length).toBe(96); expect(g.activateSkill('volley')).toBe(false);
+    g.elapsed += SKILL_COOLDOWN;
+    expect(g.activateSkill('volley')).toBe(true); expect(g.balls.length).toBe(98);
+    g.elapsed += SKILL_COOLDOWN;
+    expect(g.activateSkill('volley')).toBe(true); expect(g.balls.length).toBe(101);
   });
   it('triggers split immediately on catching a drop; missed drops do nothing', () => {
     const g = new Engine(0, () => 0.99); g.launch();
@@ -76,6 +84,46 @@ describe('automatic skills', () => {
       expect(g.lives).toBe(kind === 'volley' ? 3 : 2); expect(g.balls.length).toBe(kind === 'volley' ? 3 : 0);
     }
   });
+  it('triples all current balls only once for simultaneous split drops', () => {
+    const g = new Engine(0, () => 0.99); g.launch();
+    g.balls = Array.from({ length: 100 }, (_, i) => g.newBall(50 + i * 3, 480, 0));
+    const originals = [...g.balls];
+    const events: string[] = []; g.onEvent = event => events.push(event);
+    g.drops.push(...Array.from({ length: 2 }, () => ({ x: g.paddle, y: PADDLE_Y - 10, kind: 'split' as const })));
+    g.step(1 / 120);
+    expect(g.balls.length).toBe(300); expect(g.split).toBe(1); expect(g.drops).toHaveLength(0);
+    expect(events.filter(event => event === 'skill')).toHaveLength(1);
+    expect(events.filter(event => event === 'catch')).toHaveLength(1);
+    for (const b of originals) {
+      expect(g.balls.filter(other => other.x === b.x && other.y === b.y)).toHaveLength(3);
+    }
+  });
+  it('uses independent cooldowns without extending them on suppressed attempts', () => {
+    const g = new Engine(0); g.launch();
+    expect(g.activateSkill('split')).toBe(true);
+    expect(g.activateSkill('volley')).toBe(true);
+    expect(g.balls).toHaveLength(6);
+    g.elapsed = SKILL_COOLDOWN - 0.001;
+    expect(g.activateSkill('split')).toBe(false);
+    expect(g.activateSkill('volley')).toBe(false);
+    expect(g.split).toBe(1); expect(g.volley).toBe(1);
+    g.elapsed = SKILL_COOLDOWN;
+    expect(g.activateSkill('split')).toBe(true);
+    expect(g.balls).toHaveLength(18);
+    expect(g.activateSkill('volley')).toBe(true);
+    expect(g.balls).toHaveLength(21);
+  });
+  it('does not consume cooldown on failed activation or advance it during pause', () => {
+    const g = new Engine(0); g.status = 'playing';
+    expect(g.activateSkill('split')).toBe(false);
+    g.balls.push(g.newBall(210, 480, 0));
+    expect(g.activateSkill('split')).toBe(true);
+    g.pause(); g.step(1);
+    expect(g.elapsed).toBe(0);
+    g.resume(); expect(g.activateSkill('split')).toBe(false);
+    const retry = new Engine(0); retry.launch();
+    expect(retry.activateSkill('split')).toBe(true);
+  });
   it('uses 8% drops for green and 25% for ten-hit grey', () => {
     const g = new Engine(0, () => 0.1); const green = [...g.bricks.values()].find(b => b.maxHp === 1)!;
     g.hitBrick(green); expect(g.drops.length).toBe(0);
@@ -83,6 +131,21 @@ describe('automatic skills', () => {
   });
 });
 describe('closed chambers and campaign', () => {
+  it('wins when the final green disappears even with grey walls remaining', () => {
+    const g = new Engine(0, () => 0.99); g.launch(); let wins = 0;
+    g.onEvent = event => { if (event === 'win') wins++; };
+    const greens = [...g.bricks.values()].filter(b => b.maxHp === 1);
+    const grey = [...g.bricks.values()].find(b => b.maxHp === 10)!;
+    g.hitBrick(grey); expect(g.snapshot().progress).toBe(0);
+    for (const brick of greens.slice(0, -1)) g.hitBrick(brick);
+    expect(g.status).toBe('playing'); expect(g.snapshot().remaining).toBe(1);
+    g.hitBrick(greens[greens.length - 1]);
+    expect(g.status).toBe('won'); expect(g.bricks.size).toBeGreaterThan(0);
+    expect([...g.bricks.values()].every(b => b.maxHp === 10)).toBe(true);
+    expect(g.snapshot().progress).toBe(1); expect(g.snapshot().remaining).toBe(0); expect(wins).toBe(1);
+    const score = g.score; g.hitBrick(grey); expect(g.score).toBe(score);
+    g.balls.forEach(b => b.y = HEIGHT + 50); g.step(1 / 120); expect(g.lives).toBe(3);
+  });
   it('has six distinct dense maps bounded by ten-hit grey walls', () => {
     const signatures = [];
     for (let i = 0; i < 6; i++) {
@@ -108,14 +171,14 @@ describe('closed chambers and campaign', () => {
       expect(visited.has('20,34')).toBe(true);
     }
   });
-  it('keeps a 96-ball simulation finite on all six layouts', () => {
+  it('keeps a 243-ball simulation finite on all six layouts', () => {
     for (let level = 0; level < 6; level++) {
       const g = new Engine(level, () => 0.99); g.launch();
-      g.balls = Array.from({ length: MAX_BALLS }, (_, i) => g.newBall(30 + i % 24 * 15, GRID_Y + ROWS * CELL + 18 + Math.floor(i / 24) * 8, (i % 9 - 4) * 0.2));
+      g.balls = Array.from({ length: 243 }, (_, i) => g.newBall(30 + i % 24 * 15, GRID_Y + ROWS * CELL + 18 + Math.floor(i / 24) * 8, (i % 9 - 4) * 0.2));
       for (let f = 0; f < 1200 && g.status === 'playing'; f++) {
         const approaching = g.balls.filter(b => b.vy > 0).sort((a, b) => b.y - a.y)[0]; if (approaching) g.move(approaching.x); g.step(1 / 120);
       }
-      expect(g.bricks.size).toBeLessThan(g.total); expect(g.balls.every(b => [b.x, b.y, b.vx, b.vy].every(Number.isFinite))).toBe(true); expect(g.balls.length).toBeLessThanOrEqual(MAX_BALLS);
+      expect(g.bricks.size).toBeLessThan(g.total); expect(g.balls.every(b => [b.x, b.y, b.vx, b.vy].every(Number.isFinite))).toBe(true);
     }
   });
   it('unlocks the next level and retains best scores', () => {
